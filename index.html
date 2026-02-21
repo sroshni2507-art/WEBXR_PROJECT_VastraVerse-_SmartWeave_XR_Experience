@@ -1,128 +1,967 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>VastraVerse - SmartWeave XR Experience</title>
-    <!-- A-Frame Library -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <!-- Environment Component for Beauty -->
-    <script src="https://unpkg.com/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>VastraVerse: SmartWeave XR</title>
 
-    <style>
-        /* UI Styling */
-        .controls {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 20px;
-            z-index: 999;
-        }
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 25px;
-            background: rgba(255, 255, 255, 0.8);
-            cursor: pointer;
-            font-weight: bold;
-            font-family: sans-serif;
-            transition: 0.3s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        .btn-cool { color: #0077be; border: 2px solid #0077be; }
-        .btn-heat { color: #ff4500; border: 2px solid #ff4500; }
-        .btn:hover { transform: scale(1.1); background: #fff; }
-        
-        .title-card {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            z-index: 999;
-            background: rgba(0,0,0,0.5);
-            padding: 15px;
-            border-left: 5px solid #ff69b4;
-        }
-    </style>
+<!-- A-Frame + AR.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.5.0/aframe.min.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Rajdhani:wght@300;500;600&display=swap');
+
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --deep: #07040a;
+    --silk: #f5e6d0;
+    --cyan: #00e5ff;
+    --magenta: #ff2d78;
+    --emerald: #00e676;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body { 
+    background: var(--deep); 
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    height: 100vh; width: 100vw;
+  }
+
+  a-scene { width:100vw; height:100vh; }
+
+  /* ── LOADING SCREEN ── */
+  #loader {
+    position: fixed; inset: 0; z-index: 999;
+    background: #07040a;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 20px;
+  }
+  .loader-brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem; font-weight: 300;
+    letter-spacing: 0.5em;
+    color: var(--gold-light);
+    text-transform: uppercase;
+  }
+  .loader-brand span { color: var(--magenta); }
+  .loader-sub {
+    font-size: 0.7rem; letter-spacing: 0.3em;
+    color: rgba(201,168,76,0.5);
+    text-transform: uppercase;
+  }
+  .loader-bar-wrap {
+    width: 240px; height: 1px;
+    background: rgba(201,168,76,0.15);
+    position: relative; overflow: hidden;
+  }
+  .loader-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    width: 0%;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px var(--gold);
+  }
+  .loader-pct {
+    font-size: 0.65rem; letter-spacing: 0.2em;
+    color: rgba(201,168,76,0.6);
+  }
+
+  /* ── OVERLAY ── */
+  #overlay {
+    position: fixed; inset: 0; z-index: 10;
+    pointer-events: none;
+    display: flex; flex-direction: column;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    background: linear-gradient(180deg, rgba(7,4,10,0.92) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(201,168,76,0.15);
+  }
+  .brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem; font-weight: 300;
+    letter-spacing: 0.35em; color: var(--gold-light);
+    text-transform: uppercase;
+  }
+  .brand em { color: var(--magenta); font-style: normal; }
+  .mode-pill {
+    font-size: 0.6rem; letter-spacing: 0.25em;
+    padding: 5px 14px;
+    border: 1px solid var(--gold);
+    color: var(--gold); border-radius: 1px;
+    text-transform: uppercase;
+    background: rgba(201,168,76,0.06);
+    transition: all 0.3s;
+  }
+
+  /* ── LEFT PANEL ── */
+  .panel-left {
+    position: absolute;
+    top: 70px; left: 20px;
+    width: 250px;
+    display: flex; flex-direction: column; gap: 10px;
+    pointer-events: all;
+  }
+
+  .card {
+    background: rgba(7,4,10,0.88);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-left: 2px solid var(--gold);
+    padding: 13px 15px;
+    backdrop-filter: blur(16px);
+    border-radius: 1px;
+  }
+  .card-label {
+    font-size: 0.6rem; letter-spacing: 0.25em;
+    color: var(--gold); text-transform: uppercase;
+    margin-bottom: 9px; font-weight: 600;
+  }
+
+  /* temp */
+  .temp-row { display:flex; align-items:baseline; gap:5px; margin-bottom:8px; }
+  .temp-big {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.2rem; font-weight: 300; color: var(--silk);
+  }
+  .temp-unit { font-size:0.85rem; color:var(--gold); }
+  input[type=range] {
+    -webkit-appearance: none; width:100%; height:2px;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+    outline: none; margin-bottom:9px; border-radius:1px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width:13px; height:13px;
+    border-radius:50%; background:#fff;
+    border:2px solid var(--gold); cursor:pointer;
+    box-shadow: 0 0 8px var(--gold);
+  }
+  .status-mono {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem; line-height: 1.8;
+    color: var(--cyan); padding:7px 9px;
+    background: rgba(0,229,255,0.04);
+    border: 1px solid rgba(0,229,255,0.12);
+  }
+
+  /* fabric list */
+  .fabric-item {
+    display:flex; align-items:center; gap:10px;
+    padding:7px 9px; border:1px solid rgba(201,168,76,0.12);
+    cursor:pointer; transition:all 0.2s; margin-bottom:5px;
+    border-radius:1px;
+  }
+  .fabric-item:hover, .fabric-item.active {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.07);
+  }
+  .swatch {
+    width:26px; height:26px; border-radius:50%;
+    border:2px solid rgba(255,255,255,0.1); flex-shrink:0;
+  }
+  .fab-name { font-size:0.78rem; font-weight:600; letter-spacing:0.04em; }
+  .fab-sub { font-size:0.6rem; color:rgba(245,230,208,0.45); letter-spacing:0.06em; }
+
+  /* ── RIGHT PANEL ── */
+  .panel-right {
+    position: absolute;
+    top: 70px; right: 20px;
+    width: 210px;
+    display: flex; flex-direction: column; gap: 9px;
+    pointer-events: all;
+  }
+  .stat {
+    background: rgba(7,4,10,0.88);
+    border:1px solid rgba(201,168,76,0.18);
+    border-right:2px solid var(--gold);
+    padding:11px 13px;
+    display:flex; align-items:center; gap:10px;
+    backdrop-filter: blur(16px);
+  }
+  .stat-icon { font-size:1.1rem; }
+  .stat-lbl { font-size:0.58rem; letter-spacing:0.2em; color:var(--gold); text-transform:uppercase; }
+  .stat-val { font-size:0.82rem; font-weight:600; color:var(--silk); margin-top:2px; }
+
+  .fiber-card {
+    background: rgba(7,4,10,0.88);
+    border:1px solid rgba(201,168,76,0.18);
+    padding:11px 13px;
+    backdrop-filter:blur(16px);
+    position:relative; overflow:hidden;
+  }
+  .fiber-card::after {
+    content:'';
+    position:absolute; inset:0;
+    background: linear-gradient(90deg, transparent, rgba(201,168,76,0.06), transparent);
+    background-size:200% auto;
+    animation: shimmer 3s linear infinite;
+  }
+  @keyframes shimmer { 0%{background-position:-200% center} 100%{background-position:200% center} }
+  .fiber-list { font-size:0.72rem; line-height:1.9; color:rgba(245,230,208,0.75); }
+
+  /* ── BOTTOM XR CONTROLS ── */
+  .xr-bar {
+    position: absolute;
+    bottom: 32px; left:50%;
+    transform: translateX(-50%);
+    display: flex; gap: 14px;
+    pointer-events: all;
+  }
+  .xr-btn {
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+    padding:14px 24px;
+    background: rgba(7,4,10,0.92);
+    border:1px solid var(--gold);
+    color: var(--gold-light);
+    font-family:'Rajdhani',sans-serif;
+    font-size:0.75rem; letter-spacing:0.18em;
+    text-transform:uppercase; cursor:pointer;
+    transition:all 0.3s; backdrop-filter:blur(16px);
+    border-radius:1px; font-weight:600;
+    position:relative; overflow:hidden;
+  }
+  .xr-btn .icon { font-size:1.4rem; }
+  .xr-btn .hint { font-size:0.55rem; opacity:0.55; letter-spacing:0.1em; }
+  .xr-btn:hover { transform:translateY(-2px); }
+  .xr-btn.ar { border-color:var(--cyan); color:var(--cyan); }
+  .xr-btn.ar:hover { box-shadow:0 0 24px rgba(0,229,255,0.3); }
+  .xr-btn.vr { border-color:var(--magenta); color:var(--magenta); }
+  .xr-btn.vr:hover { box-shadow:0 0 24px rgba(255,45,120,0.3); }
+  .xr-btn.ctrl:hover { box-shadow:0 0 24px rgba(201,168,76,0.25); }
+
+  /* ── AR OVERLAY ── */
+  #ar-ui {
+    position:fixed; inset:0; z-index:50;
+    display:none; flex-direction:column;
+    align-items:center; justify-content:flex-end;
+    padding-bottom:60px;
+    pointer-events:none;
+  }
+  .ar-reticle-wrap {
+    position:absolute; top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .ar-ring {
+    width:160px; height:60px;
+    border:2px solid var(--cyan);
+    border-radius:50%;
+    box-shadow:0 0 24px rgba(0,229,255,0.5);
+    animation:ringPulse 2s ease-in-out infinite;
+  }
+  .ar-ring::before {
+    content:'';
+    position:absolute; inset:-8px;
+    border:1px solid rgba(0,229,255,0.25);
+    border-radius:50%;
+  }
+  @keyframes ringPulse {
+    0%,100%{opacity:1;transform:scale(1)}
+    50%{opacity:0.5;transform:scale(1.04)}
+  }
+  .ar-label {
+    font-size:0.65rem; letter-spacing:0.2em;
+    color:var(--cyan); text-align:center;
+    text-shadow: 0 0 12px var(--cyan);
+    text-transform:uppercase;
+  }
+  .ar-tap-btn {
+    background: rgba(0,0,0,0.8);
+    border:1px solid var(--cyan);
+    color:var(--cyan);
+    padding:11px 28px;
+    font-family:'Rajdhani',sans-serif;
+    font-size:0.75rem; letter-spacing:0.2em;
+    text-transform:uppercase; cursor:pointer;
+    border-radius:1px; pointer-events:all;
+    backdrop-filter:blur(12px);
+    transition:all 0.2s;
+  }
+  .ar-tap-btn:hover { background:rgba(0,229,255,0.1); box-shadow:0 0 20px rgba(0,229,255,0.3); }
+  .ar-exit {
+    position:absolute; top:20px; right:20px;
+    background: rgba(0,0,0,0.8);
+    border:1px solid rgba(255,255,255,0.2);
+    color:rgba(255,255,255,0.6);
+    padding:7px 16px; font-family:'Rajdhani',sans-serif;
+    font-size:0.7rem; letter-spacing:0.15em;
+    cursor:pointer; pointer-events:all; border-radius:1px;
+  }
+
+  /* ── NOTIF ── */
+  #notif {
+    position:fixed; top:75px; left:50%;
+    transform:translateX(-50%);
+    background:rgba(7,4,10,0.95);
+    border:1px solid var(--gold);
+    color:var(--gold-light);
+    padding:10px 26px; font-size:0.75rem;
+    letter-spacing:0.15em; text-transform:uppercase;
+    border-radius:1px; z-index:200;
+    display:none; backdrop-filter:blur(16px);
+    box-shadow:0 0 40px rgba(201,168,76,0.18);
+    pointer-events:none; text-align:center;
+    max-width:420px; white-space:nowrap;
+  }
+
+  /* ── MODEL CONTROLS ── */
+  .model-ctrl {
+    position:fixed; bottom:32px; right:20px;
+    display:flex; flex-direction:column; gap:8px;
+    pointer-events:all; z-index:20;
+  }
+  .ctrl-btn {
+    width:42px; height:42px;
+    background:rgba(7,4,10,0.9);
+    border:1px solid rgba(201,168,76,0.3);
+    color:var(--gold); font-size:1rem;
+    cursor:pointer; border-radius:1px;
+    display:flex; align-items:center; justify-content:center;
+    transition:all 0.2s; backdrop-filter:blur(12px);
+  }
+  .ctrl-btn:hover { border-color:var(--gold); background:rgba(201,168,76,0.08); }
+</style>
 </head>
-
 <body>
 
-    <!-- UI Overlay -->
-    <div class="title-card">
-        <h2 style="margin:0;">VastraVerse</h2>
-        <p style="margin:0;">SmartWeave Climate Saree</p>
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-brand">Vastra<em>verse</em></div>
+  <div class="loader-sub">SmartWeave · XR Experience</div>
+  <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
+  <div class="loader-pct" id="loader-pct">Loading Model... 0%</div>
+</div>
+
+<!-- NOTIFICATION -->
+<div id="notif"></div>
+
+<!-- AR UI -->
+<div id="ar-ui">
+  <div class="ar-reticle-wrap">
+    <div class="ar-ring"></div>
+    <div class="ar-label">Move camera over floor surface</div>
+  </div>
+  <button class="ar-tap-btn" id="ar-tap-btn" onclick="placeModel()">✦ TAP TO PLACE SAREE ON SURFACE</button>
+  <button class="ar-exit" onclick="exitAR()">✕ Exit AR</button>
+</div>
+
+<!-- MAIN UI OVERLAY -->
+<div id="overlay">
+  <div class="topbar">
+    <div class="brand">Vastra<em>verse</em> · SmartWeave</div>
+    <div class="mode-pill" id="mode-pill">BROWSE MODE</div>
+  </div>
+
+  <!-- LEFT -->
+  <div class="panel-left">
+    <!-- SENSOR -->
+    <div class="card">
+      <div class="card-label">⬡ Smart Sensor</div>
+      <div class="temp-row">
+        <div class="temp-big" id="temp-val">44</div>
+        <div class="temp-unit">°C</div>
+      </div>
+      <input type="range" id="temp-slider" min="0" max="60" value="44"/>
+      <div class="status-mono" id="status-mono">
+        STATUS: COOLING ACTIVE<br/>
+        FIBER: VENTILATING<br/>
+        RESPONSE: OPTIMAL
+      </div>
     </div>
 
-    <div class="controls">
-        <button class="btn btn-cool" onclick="changeMode('cool')">❄️ Cooling Mode</button>
-        <button class="btn btn-heat" onclick="changeMode('heat')">🔥 Heating Mode</button>
+    <!-- FABRICS -->
+    <div class="card">
+      <div class="card-label">◈ Saree Collection</div>
+      <div id="fabric-list">
+        <div class="fabric-item active" onclick="selectFabric(this,0)">
+          <div class="swatch" style="background:radial-gradient(circle,#d4956a,#8b3a62)"></div>
+          <div><div class="fab-name">Kanchipuram Silk</div><div class="fab-sub">NANO-THERMAL · ECO</div></div>
+        </div>
+        <div class="fabric-item" onclick="selectFabric(this,1)">
+          <div class="swatch" style="background:radial-gradient(circle,#4fc3f7,#1a237e)"></div>
+          <div><div class="fab-name">Cool Banarasi</div><div class="fab-sub">GRAPHENE GRID</div></div>
+        </div>
+        <div class="fabric-item" onclick="selectFabric(this,2)">
+          <div class="swatch" style="background:radial-gradient(circle,#a5d6a7,#2e7d32)"></div>
+          <div><div class="fab-name">Organic Khadi</div><div class="fab-sub">MOISTURE-WICK</div></div>
+        </div>
+        <div class="fabric-item" onclick="selectFabric(this,3)">
+          <div class="swatch" style="background:radial-gradient(circle,#ce93d8,#4a148c)"></div>
+          <div><div class="fab-name">Smart Chanderi</div><div class="fab-sub">PHASE-CHANGE</div></div>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <a-scene vr-mode-ui="enabled: true">
-        
-        <!-- Assets Management -->
-        <a-assets>
-            <!-- Inga unga model file name correct ah kodunga -->
-            <a-asset-item id="sareeModel" src="./traditional_indian_saree_model.glb"></a-asset-item>
-        </a-assets>
+  <!-- RIGHT -->
+  <div class="panel-right">
+    <div class="stat">
+      <div class="stat-icon">❄️</div>
+      <div><div class="stat-lbl">Cooling</div><div class="stat-val" id="s-cool">&gt;30°C Active</div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon">🔥</div>
+      <div><div class="stat-lbl">Heating</div><div class="stat-val" id="s-heat">&lt;20°C Standby</div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon">🌿</div>
+      <div><div class="stat-lbl">Eco Material</div><div class="stat-val" id="s-eco">Organic Silk</div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon">⚡</div>
+      <div><div class="stat-lbl">Smart Response</div><div class="stat-val" id="s-resp">98% Optimal</div></div>
+    </div>
+    <div class="fiber-card">
+      <div class="card-label" style="margin-bottom:8px;">▸ Fiber Analysis</div>
+      <div class="fiber-list" id="s-fiber">
+        • Cooling Nano-Polymer<br/>
+        • Graphene Thermal Grid<br/>
+        • Moisture-wicking Core
+      </div>
+    </div>
+  </div>
 
-        <!-- Environment: Indha oru line unga project ah vera level ku kondu pogum -->
-        <a-entity environment="preset: dream; dressingAmount: 50; shadow: true"></a-entity>
+  <!-- XR CONTROLS -->
+  <div class="xr-bar">
+    <button class="xr-btn ar" onclick="enterAR()">
+      <span class="icon">📱</span>
+      Enter AR
+      <span class="hint">Surface Detection</span>
+    </button>
+    <button class="xr-btn ctrl" onclick="resetCamera()">
+      <span class="icon">🔄</span>
+      Reset View
+      <span class="hint">Center Model</span>
+    </button>
+    <button class="xr-btn ctrl" onclick="toggleAnimation()">
+      <span class="icon">✨</span>
+      Animate
+      <span class="hint">Rotate / Still</span>
+    </button>
+    <button class="xr-btn vr" onclick="enterVR()">
+      <span class="icon">🥽</span>
+      Enter VR
+      <span class="hint">Luxury Showroom</span>
+    </button>
+  </div>
+</div>
 
-        <!-- Main Product Display -->
-        <a-entity id="productGroup" position="0 0 -4">
-            
-            <!-- The 3D Saree Model -->
-            <a-entity 
-                id="saree"
-                gltf-model="#sareeModel" 
-                scale="1.5 1.5 1.5"
-                animation="property: rotation; to: 0 360 0; loop: true; dur: 20000; easing: linear">
-                
-                <!-- Floating Info Hotspots -->
-                <a-sphere position="0.3 1.2 0.2" radius="0.05" color="yellow">
-                    <a-text value="Thermo Sensor" position="0.1 0 0" scale="0.5 0.5 0.5" color="white"></a-text>
-                </a-sphere>
+<!-- MODEL ZOOM CONTROLS -->
+<div class="model-ctrl">
+  <button class="ctrl-btn" onclick="zoomIn()" title="Zoom In">＋</button>
+  <button class="ctrl-btn" onclick="zoomOut()" title="Zoom Out">－</button>
+  <button class="ctrl-btn" onclick="rotateLeft()" title="Rotate Left">◀</button>
+  <button class="ctrl-btn" onclick="rotateRight()" title="Rotate Right">▶</button>
+</div>
 
-                <a-sphere position="-0.2 0.8 0.3" radius="0.05" color="cyan">
-                    <a-text value="Graphene Fiber" position="0.1 0 0" scale="0.5 0.5 0.5" color="white"></a-text>
-                </a-sphere>
-            </a-entity>
+<!-- ═══════════════════════════════════════
+     A-FRAME SCENE
+═══════════════════════════════════════ -->
+<a-scene
+  id="scene"
+  renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
+  background="color: #07040a"
+  vr-mode-ui="enabled: false"
+  loading-screen="enabled: false"
+  fog="type: exponential; color: #07040a; density: 0.04">
 
-            <!-- Base Stand -->
-            <a-cylinder radius="0.8" height="0.1" color="#333"></a-cylinder>
-        </a-entity>
+  <!-- ASSETS -->
+  <a-assets timeout="30000">
+    <a-asset-item id="saree-model" src="traditional_indian_saree_model.glb"></a-asset-item>
+  </a-assets>
 
-        <!-- Lighting -->
-        <a-light type="ambient" intensity="0.7"></a-light>
-        <a-light type="directional" position="1 3 2" intensity="0.8"></a-light>
+  <!-- ── ENVIRONMENT: LUXURY BOUTIQUE ── -->
 
-        <!-- Camera -->
-        <a-entity camera look-controls position="0 1.6 2"></a-entity>
+  <!-- Floor: dark marble -->
+  <a-plane
+    id="floor"
+    position="0 0 0"
+    rotation="-90 0 0"
+    width="20" height="20"
+    material="color:#100a14; roughness:0.1; metalness:0.3; envMapIntensity:0.8">
+  </a-plane>
 
-    </a-scene>
+  <!-- Floor gold grid lines -->
+  <a-entity id="floor-grid">
+    <!-- Cross lines -->
+    <a-box position="0 0.001 0" width="20" height="0.003" depth="0.04" color="#c9a84c" opacity="0.25"></a-box>
+    <a-box position="0 0.001 0" width="0.04" height="0.003" depth="20" color="#c9a84c" opacity="0.25"></a-box>
+    <!-- Outer ring -->
+    <a-torus position="0 0.002 0" rotation="-90 0 0" radius="4" radius-tubular="0.01" color="#c9a84c" opacity="0.2"></a-torus>
+    <a-torus position="0 0.002 0" rotation="-90 0 0" radius="6" radius-tubular="0.008" color="#c9a84c" opacity="0.12"></a-torus>
+  </a-entity>
 
-    <script>
-        // Interactive Logic
-        function changeMode(mode) {
-            const saree = document.querySelector('#saree');
-            if(mode === 'cool') {
-                // Change color to Blue-ish for cooling effect
-                saree.setAttribute('material', 'color', '#add8e6');
-                saree.setAttribute('material', 'emissive', '#0077be');
-                saree.setAttribute('material', 'emissiveIntensity', '0.5');
-                alert("Smart Sensors: Adjusting to Cooling Mode (24°C)");
-            } else {
-                // Change color to Red-ish for heating effect
-                saree.setAttribute('material', 'color', '#ffcccb');
-                saree.setAttribute('material', 'emissive', '#ff4500');
-                saree.setAttribute('material', 'emissiveIntensity', '0.5');
-                alert("Smart Sensors: Adjusting to Heating Mode (32°C)");
-            }
-        }
-    </script>
+  <!-- Walls (backdrop panels) -->
+  <!-- Back wall -->
+  <a-plane position="0 5 -8" width="20" height="12"
+    material="color:#0d0810; roughness:0.9; metalness:0.0">
+  </a-plane>
 
+  <!-- Gold wall trim horizontal -->
+  <a-box position="0 0.05 -8" width="20" height="0.04" depth="0.04" color="#c9a84c" opacity="0.5"></a-box>
+  <a-box position="0 10 -8" width="20" height="0.04" depth="0.04" color="#c9a84c" opacity="0.3"></a-box>
+  <a-box position="0 3 -8" width="20" height="0.025" depth="0.025" color="#c9a84c" opacity="0.2"></a-box>
+
+  <!-- Pillar left -->
+  <a-box position="-5 3 -7.5" width="0.4" height="6" depth="0.4"
+    material="color:#1a1020; roughness:0.3; metalness:0.5">
+  </a-box>
+  <a-box position="-5 6.1 -7.5" width="0.7" height="0.2" depth="0.7"
+    color="#c9a84c" opacity="0.6">
+  </a-box>
+  <!-- Pillar right -->
+  <a-box position="5 3 -7.5" width="0.4" height="6" depth="0.4"
+    material="color:#1a1020; roughness:0.3; metalness:0.5">
+  </a-box>
+  <a-box position="5 6.1 -7.5" width="0.7" height="0.2" depth="0.7"
+    color="#c9a84c" opacity="0.6">
+  </a-box>
+
+  <!-- Chandelier (ceiling light fixture) -->
+  <a-entity position="0 9 -2">
+    <a-sphere radius="0.15" color="#f5e6d0" emissive="#c9a84c" emissive-intensity="0.8"></a-sphere>
+    <a-torus rotation="90 0 0" radius="0.6" radius-tubular="0.02" color="#c9a84c" opacity="0.7"></a-torus>
+    <a-torus rotation="90 0 0" radius="1.0" radius-tubular="0.015" color="#c9a84c" opacity="0.4"></a-torus>
+  </a-entity>
+
+  <!-- Side display mannequin pedestals -->
+  <a-cylinder position="-3 0.3 -3" radius="0.3" height="0.6"
+    material="color:#1a1020; roughness:0.2; metalness:0.6">
+  </a-cylinder>
+  <a-cylinder position="3 0.3 -3" radius="0.3" height="0.6"
+    material="color:#1a1020; roughness:0.2; metalness:0.6">
+  </a-cylinder>
+
+  <!-- Side saree models (slightly dimmer, scaled) -->
+  <a-entity id="side-model-left"
+    position="-3 0.6 -3"
+    rotation="0 30 0"
+    scale="0.8 0.8 0.8">
+    <a-gltf-model src="#saree-model" opacity="0.65"></a-gltf-model>
+  </a-entity>
+
+  <a-entity id="side-model-right"
+    position="3 0.6 -3"
+    rotation="0 -30 0"
+    scale="0.8 0.8 0.8">
+    <a-gltf-model src="#saree-model" opacity="0.65"></a-gltf-model>
+  </a-entity>
+
+  <!-- Main pedestal -->
+  <a-cylinder id="pedestal"
+    position="0 0.25 -2"
+    radius="0.5" height="0.5"
+    material="color:#c9a84c; roughness:0.1; metalness:0.8">
+  </a-cylinder>
+  <a-cylinder
+    position="0 0.52 -2"
+    radius="0.52" height="0.04"
+    color="#e8c97a" opacity="0.9">
+  </a-cylinder>
+
+  <!-- ★ MAIN SAREE MODEL ★ -->
+  <a-entity
+    id="main-model-wrap"
+    position="0 0 -2"
+    rotation="0 0 0">
+    <a-gltf-model
+      id="main-model"
+      src="#saree-model"
+      position="0 0.5 0"
+      rotation="0 0 0"
+      scale="1 1 1"
+      shadow="cast: true; receive: true">
+    </a-gltf-model>
+  </a-entity>
+
+  <!-- AR PLACED MODEL (hidden initially) -->
+  <a-entity id="ar-model-wrap" position="0 0 -1.5" visible="false">
+    <a-gltf-model
+      id="ar-model"
+      src="#saree-model"
+      position="0 0 0"
+      scale="1 1 1">
+    </a-gltf-model>
+    <!-- Placement ring -->
+    <a-torus
+      id="place-ring"
+      position="0 0.01 0"
+      rotation="-90 0 0"
+      radius="0.6" radius-tubular="0.02"
+      color="#00e5ff" opacity="0.7"
+      animation="property: rotation; to: -90 360 0; dur: 4000; loop: true; easing: linear">
+    </a-torus>
+  </a-entity>
+
+  <!-- ── LIGHTING: LUXURY BOUTIQUE ── -->
+
+  <!-- Ambient base -->
+  <a-light type="ambient" color="#1a0f20" intensity="0.8"></a-light>
+
+  <!-- Main warm spotlight from chandelier -->
+  <a-light type="point"
+    position="0 8 -2"
+    color="#f5e0a0"
+    intensity="2.5"
+    distance="15"
+    decay="2">
+  </a-light>
+
+  <!-- Fill light left -->
+  <a-light type="point"
+    position="-4 5 0"
+    color="#c9a84c"
+    intensity="0.8"
+    distance="10"
+    decay="2">
+  </a-light>
+
+  <!-- Fill light right -->
+  <a-light type="point"
+    position="4 5 0"
+    color="#c9a84c"
+    intensity="0.8"
+    distance="10"
+    decay="2">
+  </a-light>
+
+  <!-- Smart fiber glow (colored per fabric) -->
+  <a-light id="fabric-light"
+    type="point"
+    position="0 2.5 -1.5"
+    color="#00e5ff"
+    intensity="0.6"
+    distance="4"
+    decay="2">
+  </a-light>
+
+  <!-- Back rim light -->
+  <a-light type="directional"
+    position="0 3 5"
+    color="#200820"
+    intensity="0.5">
+  </a-light>
+
+  <!-- ── CAMERA ── -->
+  <a-entity id="camera-rig" position="0 1.6 2">
+    <a-camera
+      id="main-camera"
+      fov="65"
+      near="0.05"
+      wasd-controls="enabled: false"
+      look-controls="enabled: true; touchEnabled: true; magicWindowTrackingEnabled: false">
+    </a-camera>
+  </a-entity>
+
+  <!-- Skybox: very dark -->
+  <a-sky color="#03020a"></a-sky>
+</a-scene>
+
+<script>
+// ═══════════════════════════════════════
+// GLOBALS
+// ═══════════════════════════════════════
+const fabrics = [
+  { name:'Kanchipuram Silk', eco:'Organic Silk', fibers:'• Cooling Nano-Polymer<br/>• Graphene Thermal Grid<br/>• Moisture-wicking Core', fiberColor:'#00e5ff', emissive:'#8b3a62' },
+  { name:'Cool Banarasi', eco:'Recycled Polyester', fibers:'• Graphene Neural Net<br/>• Phase-Change Capsules<br/>• Hydro-Gel Core', fiberColor:'#4fc3f7', emissive:'#1a237e' },
+  { name:'Organic Khadi', eco:'Handspun Cotton', fibers:'• Bio-Wick Fiber<br/>• Natural Zeolite Layer<br/>• Bamboo Charcoal Core', fiberColor:'#69f0ae', emissive:'#2e7d32' },
+  { name:'Smart Chanderi', eco:'Recycled Silk', fibers:'• PCM Micro-Capsules<br/>• Silver Ion Threads<br/>• Aerogel Insulation', fiberColor:'#ea80fc', emissive:'#4a148c' }
+];
+
+let selectedFabric = 0;
+let isRotating = true;
+let rotationAngle = 0;
+let arActive = false;
+let arPlaced = false;
+let modelLoaded = false;
+
+// ── LOADER ──
+const loaderBar = document.getElementById('loader-bar');
+const loaderPct = document.getElementById('loader-pct');
+const loader = document.getElementById('loader');
+
+let pct = 0;
+const loaderInt = setInterval(() => {
+  pct = Math.min(pct + Math.random() * 8, 92);
+  loaderBar.style.width = pct + '%';
+  loaderPct.textContent = `Loading Model... ${Math.floor(pct)}%`;
+}, 200);
+
+// Scene + model ready
+const scene = document.getElementById('scene');
+const mainModel = document.getElementById('main-model');
+
+mainModel.addEventListener('model-loaded', () => {
+  modelLoaded = true;
+  clearInterval(loaderInt);
+  loaderBar.style.width = '100%';
+  loaderPct.textContent = 'Ready — Entering Showroom';
+
+  // Auto-scale model to fit nicely
+  autoScaleModel();
+
+  setTimeout(() => {
+    loader.style.opacity = '0';
+    loader.style.transition = 'opacity 0.8s';
+    setTimeout(() => loader.style.display = 'none', 800);
+    showNotif('✦ Saree model loaded — Luxury Boutique ready');
+  }, 600);
+});
+
+mainModel.addEventListener('model-error', (e) => {
+  loaderPct.textContent = '⚠ Model load error — check file path';
+  console.error('Model error:', e.detail);
+});
+
+// ── AUTO SCALE ──
+function autoScaleModel() {
+  // GLB from Sketchfab — may need scale adjustment
+  // We'll set a reasonable default and let user adjust
+  const wrap = document.getElementById('main-model-wrap');
+  wrap.setAttribute('scale', '1 1 1');
+
+  // Also update side models
+  document.getElementById('ar-model').setAttribute('scale', '1 1 1');
+}
+
+// ── ROTATION LOOP ──
+function rotateLoop() {
+  if (isRotating && !arActive) {
+    rotationAngle += 0.3;
+    const wrap = document.getElementById('main-model-wrap');
+    wrap.setAttribute('rotation', `0 ${rotationAngle} 0`);
+  }
+  requestAnimationFrame(rotateLoop);
+}
+rotateLoop();
+
+// ── TEMP SENSOR ──
+document.getElementById('temp-slider').addEventListener('input', function() {
+  const t = parseInt(this.value);
+  document.getElementById('temp-val').textContent = t;
+  updateTempStatus(t);
+});
+
+function updateTempStatus(t) {
+  const sm = document.getElementById('status-mono');
+  const sc = document.getElementById('s-cool');
+  const sh = document.getElementById('s-heat');
+  if (t > 30) {
+    sm.innerHTML = 'STATUS: COOLING ACTIVE<br/>FIBER: VENTILATING<br/>RESPONSE: OPTIMAL';
+    sm.style.color = '#00e5ff';
+    sc.textContent = '>30°C Active';
+    sh.textContent = '<20°C Standby';
+  } else if (t < 20) {
+    sm.innerHTML = 'STATUS: HEATING ACTIVE<br/>FIBER: INSULATING<br/>RESPONSE: WARMING';
+    sm.style.color = '#ff9800';
+    sc.textContent = '>30°C Standby';
+    sh.textContent = '<20°C Active';
+  } else {
+    sm.innerHTML = 'STATUS: BALANCED<br/>FIBER: REGULATING<br/>RESPONSE: PASSIVE';
+    sm.style.color = '#69f0ae';
+    sc.textContent = '>30°C Standby';
+    sh.textContent = '<20°C Standby';
+  }
+}
+
+// ── FABRIC SELECT ──
+function selectFabric(el, idx) {
+  document.querySelectorAll('.fabric-item').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  selectedFabric = idx;
+  const f = fabrics[idx];
+  document.getElementById('s-eco').textContent = f.eco;
+  document.getElementById('s-fiber').innerHTML = f.fibers;
+
+  // Update smart fiber glow light
+  const fLight = document.getElementById('fabric-light');
+  fLight.setAttribute('light', `type: point; color: ${f.fiberColor}; intensity: 0.8; distance: 5; decay: 2`);
+
+  showNotif(`✦ ${f.name} — Smart fiber activated`);
+}
+
+// ── TOGGLE ROTATE ──
+function toggleAnimation() {
+  isRotating = !isRotating;
+  showNotif(isRotating ? '✦ Auto-rotation enabled' : '✦ Auto-rotation paused — drag to look');
+}
+
+// ── ZOOM ──
+function zoomIn() {
+  const rig = document.getElementById('camera-rig');
+  const pos = rig.getAttribute('position');
+  if (pos.z > 0.5) rig.setAttribute('position', `${pos.x} ${pos.y} ${pos.z - 0.4}`);
+}
+function zoomOut() {
+  const rig = document.getElementById('camera-rig');
+  const pos = rig.getAttribute('position');
+  if (pos.z < 6) rig.setAttribute('position', `${pos.x} ${pos.y} ${pos.z + 0.4}`);
+}
+function rotateLeft() {
+  rotationAngle -= 15;
+  document.getElementById('main-model-wrap').setAttribute('rotation', `0 ${rotationAngle} 0`);
+}
+function rotateRight() {
+  rotationAngle += 15;
+  document.getElementById('main-model-wrap').setAttribute('rotation', `0 ${rotationAngle} 0`);
+}
+function resetCamera() {
+  document.getElementById('camera-rig').setAttribute('position', '0 1.6 2');
+  rotationAngle = 0;
+  showNotif('✦ View reset');
+}
+
+// ── AR MODE ──
+function enterAR() {
+  if (navigator.xr) {
+    navigator.xr.isSessionSupported('immersive-ar').then(supported => {
+      if (supported) {
+        startWebXRAR();
+      } else {
+        startARSimulation();
+      }
+    }).catch(() => startARSimulation());
+  } else {
+    startARSimulation();
+  }
+}
+
+function startWebXRAR() {
+  const sceneEl = document.querySelector('a-scene');
+  sceneEl.enterAR();
+  setupARMode();
+  showNotif('📱 AR Active — Move over floor to detect surface', 4000);
+}
+
+function startARSimulation() {
+  setupARMode();
+  showNotif('📱 AR Mode — WebXR not supported on this browser. Tap below to place!', 4000);
+}
+
+function setupARMode() {
+  arActive = true;
+  arPlaced = false;
+  document.getElementById('ar-ui').style.display = 'flex';
+  document.getElementById('mode-pill').textContent = 'AR MODE';
+  document.getElementById('mode-pill').style.borderColor = '#00e5ff';
+  document.getElementById('mode-pill').style.color = '#00e5ff';
+
+  // Hide main model, show background
+  document.getElementById('main-model-wrap').setAttribute('visible', false);
+  document.getElementById('pedestal').setAttribute('visible', false);
+  document.getElementById('floor-grid').setAttribute('visible', false);
+}
+
+function placeModel() {
+  if (!arPlaced) {
+    arPlaced = true;
+    const arWrap = document.getElementById('ar-model-wrap');
+    arWrap.setAttribute('visible', true);
+    arWrap.setAttribute('position', '0 0 -1.5');
+
+    const btn = document.getElementById('ar-tap-btn');
+    btn.textContent = '✦ TAP AGAIN TO MOVE SAREE';
+
+    document.querySelector('.ar-ring').style.borderColor = '#00e676';
+    document.querySelector('.ar-ring').style.boxShadow = '0 0 24px rgba(0,230,118,0.5)';
+    document.querySelector('.ar-label').style.color = '#00e676';
+    document.querySelector('.ar-label').textContent = 'Saree placed on surface';
+
+    showNotif(`✦ ${fabrics[selectedFabric].name} placed on floor!`, 3000);
+  } else {
+    // Move closer/different spot simulation
+    const arWrap = document.getElementById('ar-model-wrap');
+    const pos = arWrap.getAttribute('position');
+    arWrap.setAttribute('position', `${(Math.random()-0.5)*2} ${pos.y} -1.5`);
+    showNotif('✦ Saree repositioned');
+  }
+}
+
+function exitAR() {
+  arActive = false;
+  arPlaced = false;
+  document.getElementById('ar-ui').style.display = 'none';
+  document.getElementById('ar-model-wrap').setAttribute('visible', false);
+  document.getElementById('main-model-wrap').setAttribute('visible', true);
+  document.getElementById('pedestal').setAttribute('visible', true);
+  document.getElementById('floor-grid').setAttribute('visible', true);
+  document.getElementById('mode-pill').textContent = 'BROWSE MODE';
+  document.getElementById('mode-pill').style.borderColor = '';
+  document.getElementById('mode-pill').style.color = '';
+
+  // Reset AR ring
+  document.querySelector('.ar-ring').style.borderColor = 'var(--cyan)';
+  document.querySelector('.ar-ring').style.boxShadow = '0 0 24px rgba(0,229,255,0.5)';
+  document.querySelector('.ar-label').style.color = 'var(--cyan)';
+  document.querySelector('.ar-label').textContent = 'Move camera over floor surface';
+  document.getElementById('ar-tap-btn').textContent = '✦ TAP TO PLACE SAREE ON SURFACE';
+
+  // Exit WebXR if active
+  const sceneEl = document.querySelector('a-scene');
+  if (sceneEl.is('vr-mode')) sceneEl.exitVR();
+
+  showNotif('✦ Exited AR mode');
+}
+
+// ── VR LUXURY SHOWROOM ──
+function enterVR() {
+  const sceneEl = document.querySelector('a-scene');
+  if (navigator.xr) {
+    navigator.xr.isSessionSupported('immersive-vr').then(supported => {
+      if (supported) {
+        sceneEl.enterVR();
+        document.getElementById('mode-pill').textContent = 'VR MODE';
+        showNotif('🥽 VR Luxury Showroom — Put on your headset!', 4000);
+      } else {
+        // Simulate VR by changing camera to "VR-like" split view feel
+        simulateVR();
+      }
+    }).catch(() => simulateVR());
+  } else {
+    simulateVR();
+  }
+}
+
+function simulateVR() {
+  // Move camera for immersive feel
+  document.getElementById('camera-rig').setAttribute('position', '0 1.6 0.5');
+  isRotating = true;
+  document.getElementById('mode-pill').textContent = 'VR PREVIEW';
+  document.getElementById('mode-pill').style.borderColor = '#ff2d78';
+  document.getElementById('mode-pill').style.color = '#ff2d78';
+  showNotif('🥽 VR Preview — Walk closer with scroll. Full VR needs a headset.', 4000);
+}
+
+// ── NOTIFICATIONS ──
+function showNotif(msg, duration=2800) {
+  const n = document.getElementById('notif');
+  n.textContent = msg;
+  n.style.display = 'block';
+  clearTimeout(n._t);
+  n._t = setTimeout(() => n.style.display = 'none', duration);
+}
+
+// ── KEYBOARD SHORTCUTS ──
+document.addEventListener('keydown', e => {
+  if (e.key === '+' || e.key === '=') zoomIn();
+  if (e.key === '-') zoomOut();
+  if (e.key === 'ArrowLeft') rotateLeft();
+  if (e.key === 'ArrowRight') rotateRight();
+  if (e.key === 'r' || e.key === 'R') toggleAnimation();
+  if (e.key === 'Escape') { exitAR(); }
+});
+
+// ── SCROLL TO ZOOM ──
+document.addEventListener('wheel', e => {
+  if (e.deltaY < 0) zoomIn(); else zoomOut();
+}, {passive:true});
+</script>
 </body>
 </html>
