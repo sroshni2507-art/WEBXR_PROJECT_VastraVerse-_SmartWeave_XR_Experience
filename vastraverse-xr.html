@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>VastraVerse: SmartWeave XR</title>
+    <!-- A-Frame & Environment -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
+    
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Rajdhani:wght@300;400;600&display=swap');
+
+      :root {
+        --gold: #c9a84c;
+        --gold-light: #e8c97a;
+        --deep: #0a0608;
+        --silk: #f5e6d0;
+        --cyan: #00e5ff;
+        --magenta: #ff2d78;
+      }
+
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { background: var(--deep); color: var(--silk); font-family: 'Rajdhani', sans-serif; overflow: hidden; height: 100vh; }
+
+      /* ── TITLE BAR ── */
+      .title-bar {
+        position: absolute; top: 0; left: 0; right: 0; padding: 18px 32px;
+        display: flex; align-items: center; justify-content: space-between;
+        background: linear-gradient(180deg, rgba(10,6,8,0.95) 0%, transparent 100%);
+        border-bottom: 1px solid rgba(201,168,76,0.2); z-index: 10;
+      }
+      .brand { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; letter-spacing: 0.3em; color: var(--gold-light); text-transform: uppercase; }
+      .brand span { color: var(--magenta); }
+
+      /* ── LEFT PANEL ── */
+      .panel-left { position: absolute; top: 90px; left: 24px; width: 280px; display: flex; flex-direction: column; gap: 15px; z-index: 10; pointer-events: all; }
+      .card { background: rgba(10,6,8,0.85); border: 1px solid rgba(201,168,76,0.25); border-left: 3px solid var(--gold); padding: 16px; backdrop-filter: blur(12px); }
+      .card-title { font-size: 0.75rem; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; margin-bottom: 12px; font-weight: 600; }
+
+      .temp-val { font-family: 'Cormorant Garamond', serif; font-size: 2.8rem; color: var(--silk); line-height: 1; }
+      .temp-slider { -webkit-appearance: none; width: 100%; height: 4px; background: linear-gradient(90deg, var(--cyan) 0%, var(--magenta) 100%); outline: none; margin: 15px 0; cursor: pointer; }
+      .temp-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: white; border: 2px solid var(--gold); border-radius: 50%; box-shadow: 0 0 10px var(--gold); }
+
+      .status-box { font-size: 0.8rem; color: var(--cyan); font-family: monospace; padding: 10px; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.2); line-height: 1.6; }
+
+      /* ── RIGHT PANEL ── */
+      .panel-right { position: absolute; top: 90px; right: 24px; width: 240px; display: flex; flex-direction: column; gap: 10px; z-index: 10; }
+      .stat-card { background: rgba(10,6,8,0.85); border-right: 3px solid var(--gold); padding: 12px; backdrop-filter: blur(12px); border: 1px solid rgba(201,168,76,0.2); }
+      .stat-label { font-size: 0.65rem; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; }
+      .stat-value { font-size: 0.9rem; font-weight: 600; margin-top: 4px; }
+
+      /* ── XR BUTTONS ── */
+      .xr-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 10; }
+      .xr-btn { padding: 12px 25px; background: rgba(10,6,8,0.9); border: 1px solid var(--gold); color: var(--gold-light); font-family: 'Rajdhani'; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; transition: 0.3s; font-weight: 600; }
+      .xr-btn:hover { background: var(--gold); color: black; box-shadow: 0 0 20px var(--gold); }
+
+      a-scene { z-index: 1; }
+    </style>
+</head>
+<body>
+
+    <!-- LUXURY UI OVERLAY -->
+    <div class="title-bar">
+        <div class="brand">Vastra<span>verse</span> · SmartWeave</div>
+        <div style="color: var(--gold); letter-spacing: 0.2em; font-size: 0.7rem;">COLLECTION 2026</div>
+    </div>
+
+    <div class="panel-left">
+        <div class="card">
+            <div class="card-title">◈ Ambient Sensor</div>
+            <div style="display:flex; align-items: baseline; gap: 5px;">
+                <div class="temp-val" id="temp-display">27</div>
+                <div style="color:var(--gold)">°C</div>
+            </div>
+            <input type="range" class="temp-slider" id="temp-slider" min="10" max="50" value="27" oninput="updateSystem(this.value)"/>
+            <div class="status-box" id="status-box">
+                STATUS: SYSTEM IDLE<br/>FIBER: OPTIMAL RESPONSE
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">◈ Fabric Analysis</div>
+            <div style="font-size: 0.8rem; line-height: 2; opacity: 0.8;">
+                • Cooling Nano-Polymer<br/>
+                • Graphene Thermal Grid<br/>
+                • Moisture-wicking Core
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-right">
+        <div class="stat-card">
+            <div class="stat-label">Cooling Threshold</div>
+            <div class="stat-value" id="cool-stat">> 30°C Standby</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Heating Threshold</div>
+            <div class="stat-value" id="heat-stat">< 20°C Standby</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Smart Response</div>
+            <div class="stat-value">98.4% Accuracy</div>
+        </div>
+    </div>
+
+    <div class="xr-controls">
+        <button class="xr-btn" onclick="alert('Entering AR Mode...')">Enter AR</button>
+        <button class="xr-btn" onclick="alert('Luxury Showroom VR Loading...')">Enter VR</button>
+    </div>
+
+    <!-- 3D SCENE (A-FRAME) -->
+    <a-scene embedded vr-mode-ui="enabled: false">
+        <a-assets>
+            <a-asset-item id="sareeModel" src="./traditional_indian_saree_model.glb"></a-asset-item>
+        </a-assets>
+
+        <!-- Luxury Environment -->
+        <a-entity id="env" environment="preset: contact; groundColor: #0a0608; grid: none; lighting: point"></a-entity>
+
+        <!-- Main Model Display -->
+        <a-entity position="0 -1.2 -3">
+            <a-entity 
+                id="saree"
+                gltf-model="#sareeModel"
+                scale="2.2 2.2 2.2"
+                rotation="0 180 0"
+                animation="property: rotation; to: 0 540 0; loop: true; dur: 40000; easing: linear">
+            </a-entity>
+            
+            <!-- Luxury Pedestal -->
+            <a-cylinder radius="1.2" height="0.1" color="#111" metalness="0.8"></a-cylinder>
+            <a-ring color="#c9a84c" rotation="-90 0 0" radius-inner="1.2" radius-outer="1.25" position="0 0.05 0"></a-ring>
+        </a-entity>
+
+        <!-- Studio Lighting -->
+        <a-light id="mainLight" type="ambient" intensity="0.5"></a-light>
+        <a-light id="spotlight" type="spot" position="0 4 0" target="#saree" intensity="1" color="#fff"></a-light>
+        
+        <a-entity camera look-controls position="0 1.6 1.5"></a-entity>
+    </a-scene>
+
+    <script>
+        function updateSystem(val) {
+            document.getElementById('temp-display').innerText = val;
+            const saree = document.querySelector('#saree');
+            const status = document.getElementById('status-box');
+            const coolStat = document.getElementById('cool-stat');
+            const heatStat = document.getElementById('heat-stat');
+            const spotlight = document.querySelector('#spotlight');
+
+            if (val > 30) {
+                // COOLING
+                saree.setAttribute('material', 'emissive', '#00e5ff');
+                saree.setAttribute('material', 'emissiveIntensity', '0.6');
+                spotlight.setAttribute('color', '#00e5ff');
+                status.innerHTML = 'STATUS: COOLING ACTIVE<br/>FIBER: VENTILATING';
+                status.style.color = '#00e5ff';
+                coolStat.innerText = '> 30°C ACTIVE';
+                heatStat.innerText = '< 20°C STANDBY';
+            } else if (val < 20) {
+                // HEATING
+                saree.setAttribute('material', 'emissive', '#ff2d78');
+                saree.setAttribute('material', 'emissiveIntensity', '0.6');
+                spotlight.setAttribute('color', '#ff2d78');
+                status.innerHTML = 'STATUS: HEATING ACTIVE<br/>FIBER: INSULATING';
+                status.style.color = '#ff2d78';
+                heatStat.innerText = '< 20°C ACTIVE';
+                coolStat.innerText = '> 30°C STANDBY';
+            } else {
+                // OPTIMAL
+                saree.setAttribute('material', 'emissiveIntensity', '0');
+                spotlight.setAttribute('color', '#ffffff');
+                status.innerHTML = 'STATUS: SYSTEM IDLE<br/>FIBER: OPTIMAL RESPONSE';
+                status.style.color = '#c9a84c';
+                coolStat.innerText = '> 30°C STANDBY';
+                heatStat.innerText = '< 20°C STANDBY';
+            }
+        }
+    </script>
+</body>
+</html>
